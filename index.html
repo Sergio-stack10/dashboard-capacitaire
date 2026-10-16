@@ -18,13 +18,15 @@
 <div class="card"><h2>Contractuel vs capacité <small id="gl"></small></h2><div class="ch tall"><canvas id="c4"></canvas></div></div>
 <div class="note">La capacité journalière du fichier Calcul CAPA est répartie au prorata de la prévision : la couverture d'un jour est donc égale à celle de sa semaine.</div>
 <div class="card tw"><h2>Détail par période</h2><div class="scr"><table id="t2"></table></div></div></section>
-<section class="pg" id="p3"><div class="note">Structure prête : les données de planification seront branchées ensuite.</div><div class="row k4"><div class="card kpi"><span>ETP prévus (moy.)</span><b id="a1">–</b></div><div class="card kpi"><span>ETP planifiés (moy.)</span><b>—</b></div><div class="card kpi"><span>Écart moyen</span><b>—</b></div><div class="card kpi"><span>Semaines en sous-effectif</span><b>—</b></div></div><div class="card"><h2>ETP prévus vs planifiés</h2><div class="ch"><canvas id="c5"></canvas></div></div></section>
-<section class="pg" id="p4"><div class="note">Structure prête : les données de réalisé seront branchées après la planification.</div><div class="row k4"><div class="card kpi"><span>Heures planifiées</span><b>—</b></div><div class="card kpi"><span>Heures réalisées</span><b>—</b></div><div class="card kpi"><span>Taux de réalisation</span><b>—</b></div><div class="card kpi"><span>Absentéisme constaté</span><b>—</b></div></div><div class="card"><h2>Planifié vs réalisé</h2><div class="ch"><canvas id="c6"></canvas></div></div></section>
+<section class="pg" id="p3"><div class="cmp"></div></section>
+<section class="pg" id="p4"><div class="cmp"></div></section>
 </main>
 <dialog id="imp"><h2>Importer / mettre à jour les données</h2>
 <p class="sub">Les fichiers sont lus dans votre navigateur (rien n'est envoyé). Les données sont gardées sur cet appareil.</p>
 <label class="drop">Roadmap (.xlsm / .xlsx) – onglet AUCHAN<input type="file" id="f1" accept=".xlsx,.xlsm"></label><div id="s1" class="st"></div>
 <label class="drop">Calcul CAPA LYDIOS (.xlsx) – onglet DAILY VISION<input type="file" id="f2" accept=".xlsx,.xlsm"></label><div id="s2" class="st"></div>
+<label class="drop">Planification &amp; réalisé (.xlsx / .csv) – colonnes : date, creneau, flux, prevu, planifie, realise<input type="file" id="f3" accept=".xlsx,.xlsm,.csv"></label><div id="s3" class="st"></div>
+<div class="hbtn"><button id="bmod">📄 Modèle Excel</button><button id="bdem">🧪 Charger une démo</button></div>
 <div class="hbtn"><button id="bexp">⬇ Exporter data.json</button><button id="brst">↺ Revenir aux données du site</button><button id="bcls" class="pri">Fermer</button></div>
 <p class="sub">Pour partager les données : exportez <b>data.json</b> puis remplacez <b>data/data.json</b> sur GitHub.</p></dialog>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
