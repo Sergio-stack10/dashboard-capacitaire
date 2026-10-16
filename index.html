@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dashboard capacitaire – Roadmap Auchan</title>
+<link rel="stylesheet" href="css/style.css"></head><body>
+<header><h1>Dashboard capacitaire – Roadmap Auchan</h1><div class="sub">Source : roadmap S42, onglet AUCHAN · année 2026 · volumes en actes, besoins en ETP</div></header>
+<nav id="nav"><button class="on" data-p="p1">1 · Prévu (roadmap)</button><button data-p="p2">2 · Prévu vs planifié</button><button data-p="p3">3 · Planifié vs réalisé</button></nav>
+<main>
+<section class="pg on" id="p1">
+<div class="seg" id="seg"><button class="on" data-c="Tous">Tous</button><button data-c="Voix">Voix</button><button data-c="Mail">Mail</button><button data-c="Autres">Autres</button></div>
+<div class="row k4" id="k1"></div>
+<div class="row g2"><div class="card"><h2>Poids de chaque activité (% du volume prévu)</h2><div class="ch"><canvas id="c1"></canvas></div></div>
+<div class="card"><h2>Volume prévu par semaine et par activité</h2><div class="ch"><canvas id="c2"></canvas></div></div></div>
+<div class="card"><h2>Besoin en ETP par semaine</h2><div class="ch"><canvas id="c3"></canvas></div></div>
+<div class="card tw" style="margin-top:12px"><h2>Détail par activité / channel</h2><table id="t1"></table></div>
+</section>
+<section class="pg" id="p2">
+<div class="empty">Structure prête : les données de planification seront branchées ensuite. Le « prévu » vient déjà de la roadmap.</div>
+<div class="row k4"><div class="card kpi"><span>ETP prévus (moy.)</span><b id="a1">–</b></div><div class="card kpi"><span>ETP planifiés (moy.)</span><b>—</b></div><div class="card kpi"><span>Écart moyen</span><b>—</b></div><div class="card kpi"><span>Semaines en sous-effectif</span><b>—</b></div></div>
+<div class="card"><h2>ETP prévus vs planifiés par semaine</h2><div class="ch"><canvas id="c4"></canvas></div></div>
+<div class="card tw" style="margin-top:12px"><h2>Écart par activité</h2><table id="t2"></table></div>
+</section>
+<section class="pg" id="p3">
+<div class="empty">Structure prête : les données de réalisé seront branchées après la planification.</div>
+<div class="row k4"><div class="card kpi"><span>Heures planifiées</span><b>—</b></div><div class="card kpi"><span>Heures réalisées</span><b>—</b></div><div class="card kpi"><span>Taux de réalisation</span><b>—</b></div><div class="card kpi"><span>Absentéisme constaté</span><b>—</b></div></div>
+<div class="card"><h2>Planifié vs réalisé par semaine</h2><div class="ch"><canvas id="c5"></canvas></div></div>
+<div class="card tw" style="margin-top:12px"><h2>Réalisation par activité</h2><table id="t3"></table></div>
+</section>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="js/app.js"></script></body></html>

@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: dashboard-capacitaire
+    runtime: static
+    staticPublishPath: .
+    buildCommand: ""
+    headers:
+      - path: /data/*
+        name: Cache-Control
+        value: no-cache
