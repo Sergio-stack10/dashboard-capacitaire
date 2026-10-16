@@ -8,8 +8,8 @@ let DATA,ch={},cur='Tous',gran='semaine',fx='Tous',d1='',d2='',sortK=null,sortD=
 function mk(id,cfg){ch[id]&&ch[id].destroy();Chart.defaults.color=css('--mu');Chart.defaults.borderColor=css('--bd');Chart.defaults.font.size=13;cfg.options=Object.assign({responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false}},cfg.options||{});ch[id]=new Chart($('#'+id),cfg)}
 function isoW(s){const d=new Date(s+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));const y=new Date(Date.UTC(d.getUTCFullYear(),0,1));return d.getUTCFullYear()+'-S'+String(Math.ceil(((d-y)/864e5+1)/7)).padStart(2,'0')}
 async function load(){try{const s=localStorage.getItem('capaData');if(s){DATA=JSON.parse(s);return}}catch(e){}DATA=await(await fetch('data/data.json')).json()}
-function save(){try{localStorage.setItem('capaData',JSON.stringify(DATA))}catch(e){}}
-function meta(){const m=DATA.meta||{};$('#meta').textContent='Roadmap : '+(m.roadmap||'–')+' · Capa : '+(m.capa||'–')+' · mise à jour '+(m.maj||'–')}
+function save(){try{localStorage.setItem('capaData',JSON.stringify(DATA.demo?{...DATA,plan:null,demo:false}:DATA))}catch(e){}}
+function meta(){const m=DATA.meta||{};$('#meta').textContent='Roadmap : '+(m.roadmap||'–')+' · Capa : '+(m.capa||'–')+(m.plan?' · Planif : '+m.plan:'')+(DATA.demo?' · DÉMO planifié/réalisé':'')+' · mise à jour '+(m.maj||'–')}
 /* ---- Page 1 : roadmap ---- */
 function render1(){const R=DATA.roadmap,W=R[0].prev.length,lab=Array.from({length:W},(_,i)=>'S'+(i+1));
  let S=R.map((d,i)=>({...d,col:PAL[i%10],n:d.c+' '+d.a})).filter(d=>cur=='Tous'||d.c==cur);
@@ -32,11 +32,49 @@ function render2(){const C=DATA.capa,sel=C.flux.filter(f=>fx=='Tous'||fx==f.c||f
  const cov=P.map(x=>x[1].c?x[1].k/x[1].c*100:null);
  mk('c4',{data:{labels:lab,datasets:[{type:'bar',label:'Contractuel',data:P.map(x=>x[1].c),backgroundColor:PAL[0]+'cc',borderRadius:4,order:2},{type:'bar',label:'Capacité',data:P.map(x=>x[1].k),backgroundColor:PAL[2]+'cc',borderRadius:4,order:2},{type:'line',label:'Couverture %',data:cov,borderColor:PAL[1],yAxisID:'y1',pointRadius:gran=='jour'?0:3,tension:.25,order:1},{type:'line',label:'Seuil 100 %',data:cov.map(()=>100),borderColor:'#e5484d',borderDash:[6,5],pointRadius:0,yAxisID:'y1',order:0}]},options:{scales:{x:{ticks:{maxTicksLimit:16}},y:{beginAtZero:true},y1:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>v+' %'}}},plugins:{legend:{position:'bottom'}}}});
  $('#t2').innerHTML='<tr><th>Période</th><th>Prévision</th><th>Contractuel</th><th>Capacité</th><th>Écart</th><th>Couverture</th></tr>'+P.map(([k,o])=>`<tr><td>${k}</td><td>${fm(o.p)}</td><td>${fm(o.c)}</td><td>${fm(o.k)}</td><td style="color:var(--${o.k>=o.c?'ok':'ko'})">${o.k-o.c>0?'+':''}${fm(o.k-o.c)}</td><td>${o.c?`<span class="pill ${o.k>=o.c?'ok':'ko'}">${pc(o.k/o.c)}</span>`:'–'}</td></tr>`).join('')}
-/* ---- Pages 3 et 4 : structure ---- */
-function render3(){const R=DATA.roadmap,W=R[0].prev.length,etp=Array.from({length:W},(_,w)=>sum(R.map(d=>d.etp[w])));$('#a1').textContent=f1(sum(etp)/W);
- mk('c5',{type:'line',data:{labels:etp.map((_,i)=>'S'+(i+1)),datasets:[{label:'ETP prévus',data:etp,borderColor:PAL[0],pointRadius:0,tension:.3},{label:'ETP planifiés (à venir)',data:[],borderColor:PAL[1],borderDash:[5,4]}]},options:{scales:{x:{ticks:{maxTicksLimit:14}}}}})}
-function render4(){mk('c6',{type:'line',data:{labels:[],datasets:[{label:'Planifié (à venir)',data:[],borderColor:PAL[0]},{label:'Réalisé (à venir)',data:[],borderColor:PAL[2]}]}})}
-const RN={p1:render1,p2:render2,p3:render3,p4:render4};let page='p1';
+/* ---- Pages 3 et 4 : prévu vs planifié, planifié vs réalisé ---- */
+//<T
+let PI=null;
+const norm=x=>String(x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'');
+const isoD=v=>{if(typeof v=='number')return new Date(Math.round((v-25569)*864e5)).toISOString().slice(0,10);v=String(v).trim();let m=v.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[0];m=v.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);return m?m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'):''};
+const hhmm=v=>{if(v===''||v==null)return '';if(typeof v=='number'){const t=Math.round((v%1)*1440);return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')}const m=String(v).match(/(\d{1,2})[:h](\d{2})/);return m?m[1].padStart(2,'0')+':'+m[2]:''};
+function planInfo(){if(PI)return PI;const rows=(DATA.plan&&DATA.plan.rows)||[];PI={rows,dates:[...new Set(rows.map(x=>x[0]))].sort(),fl:[...new Set(rows.map(x=>x[2]))]};return PI}
+const CF={pv:{a:'Prévu',b:'Planifié',ka:'p',kb:'l',tx:'Taux de planification'},pr:{a:'Planifié',b:'Réalisé',ka:'l',kb:'r',tx:'Taux de réalisation'}};
+const CS={pv:{gran:'semaine',fx:'Tous',d1:'',d2:'',src:'contr'},pr:{gran:'semaine',fx:'Tous',d1:'',d2:'',src:'contr'}};
+function series(k){const s=CS[k],C=DATA.capa,rows=planInfo().rows,m=new Map(),days=new Set(),ok=f=>s.fx=='Tous'||s.fx==f||s.fx==f.split(' ')[0],inr=d=>d>=s.d1&&d<=s.d2,sl=s.gran=='creneau';
+ const key=(d,t)=>sl?t:s.gran=='jour'?d:s.gran=='mois'?d.slice(0,7):isoW(d),put=(q,f,v)=>{const o=m.get(q)||{p:0,l:0,r:0};o[f]+=v;m.set(q,o)};
+ if(!sl)C.flux.forEach(f=>{if(ok(f.k))C.dates.forEach((d,i)=>{if(inr(d))put(key(d),'p',f[s.src][i])})});
+ rows.forEach(([d,t,f,p,l,r])=>{if(!inr(d)||!ok(f)||(sl&&!t))return;const q=key(d,t);if(sl){days.add(d);put(q,'p',p)}put(q,'l',l);put(q,'r',r)});
+ const n=sl?(days.size||1):1;return [...m].sort((x,y)=>x[0]<y[0]?-1:1).map(([q,o])=>[q,{p:o.p/n,l:o.l/n,r:o.r/n}])}
+function demo(){const C=DATA.capa,sl=[];for(let h=7.5;h<=20.5;h+=.5)sl.push(String(Math.floor(h)).padStart(2,'0')+':'+(h%1?'30':'00'));
+ const pr=sl.map((_,i)=>{const x=i/(sl.length-1);return Math.exp(-((x-.3)**2)/.02)+.8*Math.exp(-((x-.7)**2)/.03)+.15}),ps=sum(pr),s0=Math.floor(C.dates.length*.55),rows=[];let sd=7;const rnd=()=>(sd=(sd*9301+49297)%233280)/233280;
+ C.flux.forEach(f=>{for(let i=s0;i<Math.min(s0+28,C.dates.length);i++){if(!f.contr[i])continue;sl.forEach((t,j)=>{const l=f.capa[i]*pr[j]/ps*(.92+.16*rnd());rows.push([C.dates[i],t,f.k,Math.round(f.contr[i]*pr[j]/ps),Math.round(l),Math.round(l*(.85+.25*rnd()))])})}});
+ DATA.plan={rows};DATA.demo=true;PI=null}
+//T>
+function initCmp(){const C=DATA.capa,I=planInfo(),ds=[...C.dates,...I.dates].sort(),fl=[...new Set([...C.flux.map(f=>f.k),...I.fl])],ch=[...new Set(fl.map(f=>f.split(' ')[0]))];
+ ['pv','pr'].forEach(k=>{const s=CS[k],r=$('#'+(k=='pv'?'p3':'p4')+' .cmp');s.d1=ds[0];s.d2=ds[ds.length-1];s.fx='Tous';buildCmp(k,r,ch,fl)})}
+function buildCmp(k,r,ch,fl){const s=CS[k],c=CF[k],opt=['Tous',...ch,...fl].map(o=>`<option>${o}</option>`).join('');
+ r.innerHTML=`<div class="bar2"><div class="seg">${[['mois','Mois'],['semaine','Semaine'],['jour','Jour'],['creneau','30 min']].map(g=>`<button data-g="${g[0]}" class="${g[0]==s.gran?'on':''}">${g[1]}</button>`).join('')}</div><label>Flux <select class="fxs">${opt}</select></label>${k=='pv'?'<label>Prévu = <select class="src"><option value="contr">Contractuel</option><option value="capa">Capacité</option></select></label>':''}<label><span class="l1">Du</span> <input type="date" class="e1" value="${s.d1}"></label><label class="l2">Au <input type="date" class="e2" value="${s.d2}"></label></div><div class="note nn"></div><div class="row k4 kk"></div><div class="card"><h2>${c.a} vs ${c.b} <small class="gl"></small></h2><div class="ch tall"><canvas id="cc-${k}"></canvas></div></div><div class="card tw"><h2>Détail par période</h2><div class="scr"><table class="tt"></table></div></div>`;
+ const q=x=>r.querySelector(x),redo=()=>renderCmp(k);
+ q('.seg').onclick=e=>{const g=e.target.dataset.g;if(!g)return;s.gran=g;r.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on',b==e.target));if(g=='creneau'){const L=planInfo().dates;s.d1=s.d2=L.length?L[L.length-1]:s.d1;q('.e1').value=s.d1;q('.e2').value=s.d2}redo()};
+ q('.fxs').onchange=e=>{s.fx=e.target.value;redo()};if(q('.src'))q('.src').onchange=e=>{s.src=e.target.value;redo()};
+ q('.e1').onchange=e=>{s.d1=e.target.value||s.d1;if(s.gran=='creneau'){s.d2=s.d1;q('.e2').value=s.d2}redo()};q('.e2').onchange=e=>{s.d2=e.target.value||s.d2;redo()}}
+function renderCmp(k){const s=CS[k],c=CF[k],r=$('#'+(k=='pv'?'p3':'p4')+' .cmp'),q=x=>r.querySelector(x),P=series(k),has=planInfo().rows.length>0,sl=s.gran=='creneau';
+ let A=P.map(x=>x[1][c.ka]),B=P.map(x=>x[1][c.kb]);if(!sum(A))A=null;if(!has||!sum(B))B=null;
+ q('.l1').textContent=sl?'Jour':'Du';q('.l2').style.display=sl?'none':'';
+ q('.nn').style.display=(!has||(!A&&sl))?'':'none';q('.nn').textContent=!has?'Aucune donnée de planification / réalisé : importez un fichier (bouton ⬆ en haut) ou chargez la démo.':'Prévu par créneau indisponible : l\'onglet PREV par H du fichier Calcul CAPA ne contient que des zéros. Ajoutez une colonne « prevu » dans le fichier importé.';
+ q('.gl').textContent='('+({mois:'par mois',semaine:'par semaine',jour:'par jour',creneau:'par créneau de 30 min'+(s.d1==s.d2?' · '+s.d1:' · moyenne/jour')})[s.gran]+' · '+(s.fx=='Tous'?'tous flux':s.fx)+(DATA.demo&&has?' · DÉMO':'')+')';
+ const TA=A?sum(A):null,TB=B?sum(B):null,low=A&&B?P.filter((x,i)=>A[i]>0&&B[i]<A[i]).length:null;
+ q('.kk').innerHTML=kpi([[c.a,TA==null?'—':fm(TA)],[c.b,TB==null?'—':fm(TB)],[c.tx,TA&&TB!=null?pc(TB/TA):'—'],['Périodes sous 100 %',low==null?'—':low+' / '+P.length]]);
+ const tx=A&&B?P.map((x,i)=>A[i]?B[i]/A[i]*100:null):[];
+ mk('cc-'+k,{data:{labels:P.map(x=>x[0]),datasets:[{type:'bar',label:c.a,data:A||[],backgroundColor:PAL[0]+'cc',borderRadius:4,order:2},{type:'bar',label:c.b,data:B||[],backgroundColor:PAL[k=='pv'?1:2]+'cc',borderRadius:4,order:2},{type:'line',label:c.tx+' %',data:tx,borderColor:PAL[3],yAxisID:'y1',pointRadius:sl||s.gran=='jour'?0:3,tension:.25,order:1},{type:'line',label:'Seuil 100 %',data:tx.map(()=>100),borderColor:'#e5484d',borderDash:[6,5],pointRadius:0,yAxisID:'y1',order:0}]},options:{scales:{x:{ticks:{maxTicksLimit:sl?14:16}},y:{beginAtZero:true},y1:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>v+' %'}}},plugins:{legend:{position:'bottom'}}}});
+ q('.tt').innerHTML='<tr><th>Période</th><th>'+c.a+'</th><th>'+c.b+'</th><th>Écart</th><th>Taux</th></tr>'+P.map((x,i)=>{const a=A?A[i]:null,b=B?B[i]:null,e=a!=null&&b!=null?b-a:null;return `<tr><td>${x[0]}</td><td>${a==null?'—':fm(a)}</td><td>${b==null?'—':fm(b)}</td><td style="color:var(--${e>=0?'ok':'ko'})">${e==null?'—':(e>0?'+':'')+fm(e)}</td><td>${e!=null&&a?`<span class="pill ${b>=a?'ok':'ko'}">${pc(b/a)}</span>`:'—'}</td></tr>`}).join('')}
+async function impPlan(f){const wb=XLSX.read(await f.arrayBuffer(),{type:'array'}),J=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:true}),rows=[];
+ J.forEach(o=>{const g={};for(const k in o)g[norm(k)]=o[k];const d=isoD(g.date),fl=String(g.flux||'').trim();if(d&&fl)rows.push([d,hhmm(g.creneau),fl,+g.prevu||0,+g.planifie||0,+g.realise||0])});
+ if(!rows.length)throw new Error('aucune ligne valide (colonnes attendues : date, creneau, flux, prevu, planifie, realise)');
+ DATA.plan={rows};DATA.demo=false;PI=null;DATA.meta={...DATA.meta,plan:f.name,maj:new Date().toISOString().slice(0,10)};const I=planInfo();return rows.length+' lignes · '+I.fl.length+' flux · '+I.dates[0]+' → '+I.dates[I.dates.length-1]}
+function modele(){const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['date','creneau','flux','prevu','planifie','realise'],['2026-09-01','09:00','Voix Hyper',120,125,118],['2026-09-01','09:30','Voix Hyper',135,140,142],['2026-09-01','09:00','Voix Drive',150,148,139]]),'Planification');XLSX.writeFile(wb,'modele_planification.xlsx')}
+const RN={p1:render1,p2:render2,p3:()=>renderCmp('pv'),p4:()=>renderCmp('pr')};let page='p1';
 function go(p){page=p;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.p==p));$$('.pg').forEach(s=>s.classList.toggle('on',s.id==p));RN[p]()}
 function setupCapa(){const C=DATA.capa;d1=C.dates[0];d2=C.dates[C.dates.length-1];$('#d1').value=d1;$('#d2').value=d2;
  $('#fx').innerHTML='<option>Tous</option>'+[...new Set(C.flux.map(f=>f.c))].map(c=>`<option>${c}</option>`).join('')+C.flux.map(f=>`<option>${f.k}</option>`).join('');fx='Tous';$('#fx').value='Tous'}
@@ -55,7 +93,7 @@ async function impCapa(f){const ws=await sheet(f,'DAILY VISION'),e=XLSX.utils.de
  const lo=nz[0],hi=nz[nz.length-1]+1;DATA.capa={dates:cols.map(c=>c[1]).slice(lo,hi),flux:fl.map(f=>({...f,prev:f.prev.slice(lo,hi),contr:f.contr.slice(lo,hi),capa:f.capa.slice(lo,hi)}))};
  DATA.meta={...DATA.meta,capa:f.name,maj:new Date().toISOString().slice(0,10)};return fl.length+' flux · '+DATA.capa.dates.length+' jours ('+DATA.capa.dates[0]+' → '+DATA.capa.dates.slice(-1)[0]+')'}
 function bindImport(fid,sid,fn){$('#'+fid).onchange=async e=>{const f=e.target.files[0],s=$('#'+sid);if(!f)return;s.className='st';s.textContent='Lecture en cours…';
- try{s.textContent='✓ '+await fn(f);s.className='st ok';save();meta();if(fn==impCapa)setupCapa();RN[page]()}catch(err){s.textContent='✗ '+err.message;s.className='st ko'}}}
+ try{s.textContent='✓ '+await fn(f);s.className='st ok';save();meta();if(fn==impCapa)setupCapa();initCmp();RN[page]()}catch(err){s.textContent='✗ '+err.message;s.className='st ko'}}}
 /* ---- Init ---- */
 (async()=>{try{await load()}catch(e){$('main').innerHTML='<p>Erreur de chargement des données : '+e+'</p>';return}
  meta();setupCapa();
@@ -66,4 +104,6 @@ function bindImport(fid,sid,fn){$('#'+fid).onchange=async e=>{const f=e.target.f
  $('#bimp').onclick=()=>$('#imp').showModal();$('#bcls').onclick=()=>$('#imp').close();
  $('#bexp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(DATA)],{type:'application/json'}));a.download='data.json';a.click()};
  $('#brst').onclick=()=>{try{localStorage.removeItem('capaData')}catch(e){}location.reload()};
- bindImport('f1','s1',impRoadmap);bindImport('f2','s2',impCapa);render1()})();
+ bindImport('f1','s1',impRoadmap);bindImport('f2','s2',impCapa);bindImport('f3','s3',impPlan);
+ $('#bmod').onclick=modele;$('#bdem').onclick=()=>{demo();meta();initCmp();RN[page]();$('#s3').textContent='✓ Démo chargée (28 jours, non enregistrée)';$('#s3').className='st ok'};
+ initCmp();render1()})();
